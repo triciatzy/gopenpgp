@@ -35,7 +35,7 @@ func (keyRing *KeyRing) EncryptWithCompression(message *PlainMessage, privateKey
 	config := &packet.Config{
 		DefaultCipher:          packet.CipherAES256,
 		Time:                   getTimeGenerator(),
-		DefaultCompressionAlgo: constants.DefaultCompression,
+		DefaultCompressionAlgo: packet.CompressionZIP,
 		CompressionConfig:      &packet.CompressionConfig{Level: constants.DefaultCompressionLevel},
 	}
 
