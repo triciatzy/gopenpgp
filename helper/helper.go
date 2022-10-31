@@ -74,7 +74,7 @@ func EncryptSignMessageArmored(
 		return "", errors.Wrap(err, "gopenpgp: unable to create new keyring")
 	}
 
-	if pgpMessage, err = publicKeyRing.Encrypt(message, privateKeyRing); err != nil {
+	if pgpMessage, err = publicKeyRing.EncryptWithCompression(message, privateKeyRing); err != nil {
 		return "", errors.Wrap(err, "gopenpgp: unable to encrypt message")
 	}
 
