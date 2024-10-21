@@ -4,6 +4,103 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.7.5] 2023-31-01
+
+### Added
+- API to get signature key IDs for mobile:
+	```go
+	func (msg *PGPMessage) GetHexSignatureKeyIDsJson() []byte
+	```
+- API to get encryption key IDs for mobile:
+	```go
+	func (msg *PGPMessage) GetHexEncryptionKeyIDsJson() []byte
+	```
+- API to get the number of key packets in a PGP message:
+	```go
+	func (msg *PGPSplitMessage) GetNumberOfKeyPackets() (int, error)
+	```
+- API in package `helper` to encrypt a PGP message to an additional key:
+	```go
+	func EncryptPGPMessageToAdditionalKey(messageToModify *crypto.PGPSplitMessage, keyRing *crypto.KeyRing, additionalKey *crypto.KeyRing) error
+	```
+
+## [2.7.4] 2023-10-27
+### Fixed
+- Ensure that `(SessionKey).Decrypt` functions return an error if no integrity protection is present in the encrypted input. To protect SEIPDv1 encrypted messages, SED packets must not be allowed in decryption.
+  
+## [2.7.3] 2023-08-28
+## Added
+- Add `helper.QuickCheckDecrypt` function to the helper package. The function allows to check with high probability if a session key can decrypt a SEIPDv1 data packet given its 24-byte prefix.
+
+## [2.7.2] 2023-07-17
+### Changed
+- Updated underlying crypto library
+
+### Fixed
+- Ensure DecryptSessionKey returns an error for a missing key packet
+
+## [2.7.1] 2023-04-21
+### Added
+- Add mobile helpers for signature verification with contexts.
+
+## [2.7.0] 2023-04-14
+### Changed
+- The `SignatureVerificationError` struct now has a `Cause error` field, which is returned by the the Unwrap function. The cause is also included in the error message.
+	NB: If the caller was relying on the exact message of the error, it might break the flow.
+- When a signature fails verification because of the signature context, it returns a `SignatureVerificationError` with 
+status `constants.SIGNATURE_BAD_CONTEXT` instead of `constants.SIGNATURE_FAILED`.
+
+## Added
+- Add api for signature context on streams `SignDetachedStreamWithContext`.
+- Add API for signature context on embedded signatures.
+
+## Fixed
+- When verifying detached signatures, gopenpgp sometimes needs to reattempt verification a second time to check for edge cases of signature expiration. This logic was broken because it was not rewinding the data readers.
+
+## [2.6.1] 2023-03-22
+
+### Security fix
+
+- Update `github.com/ProtonMail/go-crypto` and `github.com/ProtonMail/go-mime` to fix
+panic on invalid inputs.
+
+## [2.6.0] 2023-03-15
+
+### Added
+- API for adding context to detached signatures:
+	```go
+	sig, err := keyRing.SignDetachedWithContext(message, context)
+	```
+- API to verify the context of detached signatures:
+	```go
+	err := keyRing.VerifyDetachedWithContext(message, signature, verifyTime, verificationContext)
+	```
+### Changed
+- Update `github.com/ProtonMail/go-crypto` to the latest version
+- More strictly verify detached signatures: reject detached signatures from revoked and expired keys.
+- In `GetVerifiedSignatureTimestamp`, use the new `VerifyDetachedSignatureAndHash` function to get the verified signature, instead of parsing the signature packets manually to get the timestamp.
+- Upgraded golang.org/x/crypto dependency to v0.7.0
+
+## [2.5.2] 2023-01-25
+### Changed
+- Update `github.com/ProtonMail/go-crypto` to the latest version
+
+## [2.5.1] 2023-01-24
+
+### Added
+- Streaming API to encrypt with compression:
+  - `func (keyRing *KeyRing) EncryptStreamWithCompression`
+  - `func (keyRing *KeyRing) EncryptSplitStreamWithCompression`
+  - `func (sk *SessionKey) EncryptStreamWithCompression`
+
+## [2.5.0] 2022-12-16
+### Changed
+- Update `github.com/ProtonMail/go-crypto` to the latest version
+- Update `github.com/ProtonMail/go-mime` to the latest version, which cleans up unneeded dependencies. And fix an issue with PGP/MIME messages with non standard encodings.
+- Sanitize strings returned in `MIMECallbacks.OnBody()` and `PlainMessage.GetString()`. Strings that have non utf8 characters will be sanitized to have the "character unknown" character : � instead.
+- Detached sign text messages with signature type text. Similarly, clearsigned messages now also use signature type text.
+- Leave trailing spaces of text messages intact (except for clearsigned messages, where the spec requires us to trim trailing spaces). Note that for backwards compatibility, when verifying detached signatures over text messages, the application will have to trim trailing spaces in order for the signature to verify, if it was created by a previous version of this library (using `crypto.NewPlainMessageFromString()`).
+
 ## [2.4.10] 2022-08-22
 ### Changed
 - Updated underlying crypto library

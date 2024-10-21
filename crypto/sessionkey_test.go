@@ -249,6 +249,30 @@ func TestDataPacketEncryptionAndSignature(t *testing.T) {
 	assert.Exactly(t, message.GetString(), finalMessage.GetString())
 }
 
+func TestDataPacketEncryptionAndSignatureWithContext(t *testing.T) {
+	var message = NewPlainMessageFromString(
+		"The secret code is... 1, 2, 3, 4, 5. I repeat: the secret code is... 1, 2, 3, 4, 5",
+	)
+	var testContext = "test-context"
+	// Encrypt data with session key
+	dataPacket, err := testSessionKey.EncryptAndSignWithContext(message, keyRingTestPrivate, NewSigningContext(testContext, true))
+	if err != nil {
+		t.Fatal("Expected no error when encrypting and signing, got:", err)
+	}
+
+	// Decrypt & verify data with the good session key and keyring
+	decrypted, err := testSessionKey.DecryptAndVerifyWithContext(
+		dataPacket,
+		keyRingTestPublic,
+		GetUnixTime(),
+		NewVerificationContext(testContext, true, 0),
+	)
+	if err != nil {
+		t.Fatal("Expected no error when decrypting & verifying, got:", err)
+	}
+	assert.Exactly(t, message.GetString(), decrypted.GetString())
+}
+
 func TestDataPacketDecryption(t *testing.T) {
 	pgpMessage, err := NewPGPMessageFromArmored(readTestFile("message_signed", false))
 	if err != nil {
@@ -383,4 +407,40 @@ func TestAEADDataPacketDecryption(t *testing.T) {
 	}
 
 	assert.Exactly(t, "hello world\n", decrypted.GetString())
+}
+
+func TestSEDDecryption(t *testing.T) {
+	pgpMessageData, err := ioutil.ReadFile("testdata/sed_message")
+	if err != nil {
+		t.Fatal("Expected no error when reading message data, got:", err)
+	}
+	pgpMessage, err := NewPGPMessageFromArmored(string(pgpMessageData))
+	if err != nil {
+		t.Fatal("Expected no error when creating message, got:", err)
+	}
+
+	split, err := pgpMessage.SplitMessage()
+	if err != nil {
+		t.Fatal("Expected no error when splitting, got:", err)
+	}
+
+	privateKey, err := NewKeyFromArmored(readTestFile("sed_key", false))
+	if err != nil {
+		t.Fatal("Expected no error when unarmoring key, got:", err)
+	}
+
+	kR, err := NewKeyRing(privateKey)
+	if err != nil {
+		t.Fatal("Expected no error when creating the keyring, got:", err)
+	}
+	defer kR.ClearPrivateParams()
+	sessionKey, err := kR.DecryptSessionKey(split.GetBinaryKeyPacket())
+	if err != nil {
+		t.Fatal("Expected no error when decrypting session key, got:", err)
+	}
+
+	_, err = sessionKey.Decrypt(split.GetBinaryDataPacket())
+	if err == nil {
+		t.Fatal("sed packets without authentication should not be allowed", err)
+	}
 }
