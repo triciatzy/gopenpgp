@@ -245,7 +245,7 @@ func asymmetricEncryptStream(
 	}
 
 	if compress {
-		config.DefaultCompressionAlgo = constants.DefaultCompression
+		config.DefaultCompressionAlgo = packet.CompressionZIP
 		config.CompressionConfig = &packet.CompressionConfig{Level: constants.DefaultCompressionLevel}
 	}
 
